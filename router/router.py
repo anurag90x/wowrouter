@@ -1,4 +1,5 @@
 from trie import Trie
+import functools
 
 
 class Router:
@@ -6,7 +7,8 @@ class Router:
         self.trie = Trie()
 
     def add_route(self, route, route_action):
-        self.trie.add(route, route_action)
+        segments = ['/' + seg for seg in route.split('/')]
+        self.trie.add(segments, route_action)
 
     def show_routes(self):
         root = self.trie.root
@@ -16,4 +18,6 @@ class Router:
         return th
 
     def load_route(self, route):
-        return self.trie.find(route, {})
+        segments = ['/' + seg for seg in route.split('/')]
+        action, bindings = self.trie.find(segments, {})
+        return functools.partial(action, **bindings)

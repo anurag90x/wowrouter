@@ -1,6 +1,3 @@
-dynamic_whitelist = ['integer', 'string']
-
-
 class Node:
     def __init__(self, val):
         self.val = val
@@ -16,7 +13,7 @@ class Trie:
 
     def add(self, path, route_action):
         def _add(node, current):
-            if current == '':
+            if current == []:
                 node.children[''] = route_action
                 return
 
@@ -24,12 +21,8 @@ class Trie:
                 return _add(node.children[current[0]], current[1:])
 
             curr = current[0]
-            variable_binding = dynamic_binding(curr)
-            if variable_binding:
-                node.children[str(type(curr))] = Node(variable_binding)
-            else:
-                node.children[curr] = Node(curr)
-                return _add(node.children[curr], current[1:])
+            node.children[curr] = Node(curr)
+            return _add(node.children[curr], current[1:])
         return _add(self.root, path)
 
     def get_paths(self):
@@ -55,22 +48,20 @@ class Trie:
                     node.children[current[0]],
                     current[1:]
                 )
-            if type(current[0]) in node.children:
-                # this is the actual variable binding name
-                bindings.update({
-                    node.children[type(current[0])]: current[0],
-                })
-                return _find(
-                    node.children[type(current[0])],
-                    current[1:],
-                    bindings
-                )
+            dynamic_children = self._get_dynamic_children(node.children)
+            for child in dynamic_children:
+                    name_and_type = child.val.split(':')
+                    var_name = name_and_type[0][2:]
+                    bindings.update({var_name: current[0][1:]})
+                    found = _find(child, current[1:])
+                    if found:
+                        return found
+                    bindings.pop(var_name)
 
             return False
-        return _find(self.root, path)
+        return _find(self.root, path), bindings
 
-
-def dynamic_binding(segment):
-    dyn_tags = segment[0] == '<' and segment[-1] == '>'
-    if (dyn_tags and segment[1:-1] in dynamic_whitelist):
-        return segment.split(':')[-1]
+    def _get_dynamic_children(self, children):
+        def is_dynamic(val):
+            return len(val) > 2 and val[1] == '<' and val[-1] == '>'
+        return [child for child in children.values() if is_dynamic(child.val)]
